@@ -1,0 +1,86 @@
+function cmtaddreplyclick(id, type = 0, id_value, parent_id){
+        var added = $("#comment_wrapper .cmextra form");
+         /* Xóa form nếu nó tồn tại */
+        added.remove();
+        /* Them moi */
+        var comment = {
+            type: type,
+            parent_id: parent_id,
+            id_value: id_value
+        };
+        $.post(
+            'ajax/commentform.php?act=form',
+            {data: $.toJSON(comment)},
+            function(response){
+                var res = $.evalJSON(response);
+                $("#comment"+id+" .cmextra").append(res.content);
+            },
+            'text'
+        );
+
+
+}
+function submitReply(form){
+        var form = $(form);
+        var comment = {
+            user_name: $('[name=rname]',form).val(),
+            telephone:$('[name=rtel]',form).val(),
+            content: $('[name=rcontent]',form).val(),
+            type: $('[name=rtype]',form).val(),
+            parent_id: $('[name=rparent]',form).val(),
+            id: $('[name=rvalue]',form).val(),
+            captcha: $('[name=rcaptcha]',form).val(),
+            token: $('[name=csrf_token]',form).val(),
+            rank: 0
+        };
+
+        var validItem = $('input[name=rname], textarea, input[name=rcaptcha]');
+        validItem.tipsy({gravity: 's', fade: true, trigger: 'manual'}).valid8('').focusout(function(){validAndTip($(this));}).keyup(function(){validAndTip($(this));});
+
+        if (comment.user_name.length < 6 ) {
+            $('[name=rname]',form).attr('original-title', 'Tên cần có độ dài ít nhất 6 ký tự').tipsy('show');
+            return false;
+        }
+        if (comment.token.length == 0) {
+            $('[name=token]',form).attr('original-title', 'Token không hợp lệ').tipsy('show');
+            return false;
+        }
+
+        if (comment.content.length == 0) {
+            $('[name=rcontent]',form).attr('original-title', lang.error_comment_content_required).tipsy('show');
+            return false;
+        }
+        if (comment.content.length < 30) {
+            $('[name=rcontent]',form).attr('original-title', 'Đánh giá tối thiểu 30 ký tự.').tipsy('show');
+            return false;
+        }
+        if ($('[name=rcaptcha]',form).length > 0 && comment.captcha.length == 0) {
+            $('[name=rcaptcha]',form).attr('original-title', lang.error_captcha_required).tipsy('show');
+            return false;
+        }
+
+        $.post(
+            'ajax/comment.php',
+            {cmt: $.toJSON(comment)},
+            function(response){
+                var res = $.evalJSON(response);
+
+                if (res.error == 0) {
+                    $('#comment_wrapper').html(res.content);
+                    $('.rank_star').rating({
+                        focus: function(value, link){
+                            var tip = $('#star_tip');
+                            tip[0].data = tip[0].data || tip.html();
+                            tip.html(link.title || 'value: '+value);
+                        },
+                        blur: function(value, link){
+                            var tip = $('#star_tip');
+                            $('#star_tip').html(tip[0].data || '');
+                        }
+                    });
+                    $('.tip').tipsy({gravity: 's',fade: true,html: true});
+                }
+            },
+            'text'
+        );
+}
